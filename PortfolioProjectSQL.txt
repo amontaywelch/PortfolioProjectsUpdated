@@ -574,7 +574,7 @@ ON c1.caseid = c2.caseid
 GROUP BY c1.state, c2.total_cost, c2.median_income;
 ORDER BY income_ratio DESC;
 
-/* Creating views for visualization in Tableau */
+/* Creating views for visualization */
 CREATE VIEW StateIncomeRatios AS 
 SELECT DISTINCT
    c1.state,
