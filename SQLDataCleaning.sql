@@ -16,6 +16,16 @@ FROM orders;
 SELECT *
 FROM products;
 
+/* Change column loyaltycard from BOOLEAN to VARCHAR to run UPPER function */
+ALTER TABLE customers
+ALTER COLUMN loyaltycard TYPE VARCHAR(5);
+
+SELECT UPPER(loyaltycard)
+FROM customers;
+
+UPDATE customers
+SET loyaltycard = UPPER(loyaltycard);
+
 /* Looking at the distinct coffee types */
 SELECT DISTINCT coffeetype
 FROM products;
