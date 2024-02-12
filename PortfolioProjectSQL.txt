@@ -357,6 +357,8 @@ WITH transportation_metro AS (
  WHERE cases.county = 'New York County'
  AND costs.transportation_cost = 2216.46
 )
+SELECT * FROM transportation_metro;
+
 
 /* Highest healthcare cost */
 SELECT DISTINCT
@@ -431,6 +433,8 @@ WITH childcare_metro AS (
  WHERE cases.county = 'District of Columbia'
  AND costs.childcare_cost = 48831.09
 )
+SELECT * FROM childcare_metro;
+
 /* Note: This datsets involves case studies with households of 0 children, so finding the minimum childcare cost is not suitable */
 
 
@@ -482,6 +486,7 @@ WITH othercosts_metro AS (
  WHERE cases.county = 'Trigg County'
  AND costs.other_costs = 2611.64
 )
+SELECT * FROM othercosts_metro;
 
 /* Highest annual taxes amount */
 SELECT DISTINCT
@@ -506,6 +511,7 @@ WITH annual_taxes_metro AS (
  WHERE cases.county = 'San Mateo County'
  AND costs.annual_taxes = 47753.39
 )
+SELECT * FROM annual_taxes_metro;
 
 /* Lowest amount of annual taxes */
 SELECT DISTINCT
@@ -530,6 +536,7 @@ WITH annual_taxes_metro AS (
  WHERE cases.county = 'Starr County'
  AND costs.annual_taxes = 1027.8
 )
+SELECT * FROM annual_taxes_metro;
 
 /* Looking at the average household size in the US */
 SELECT
@@ -709,4 +716,3 @@ FROM mostexpensivecounty;
 
 /* Some views were dropped in order to add the ORDER BY statements, as I thought that they weren't able to be added.
 Performed a number of select queries from various views to confirm the correct data is returned. */
-
