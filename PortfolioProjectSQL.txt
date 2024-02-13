@@ -578,7 +578,7 @@ SELECT DISTINCT
 FROM case_table AS c1
 JOIN cost_table AS c2
 ON c1.caseid = c2.caseid
-GROUP BY c1.state, c2.total_cost, c2.median_income;
+GROUP BY c1.state, c2.total_cost, c2.median_income
 ORDER BY income_ratio DESC;
 
 /* Creating views for visualization */
