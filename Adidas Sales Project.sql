@@ -243,6 +243,30 @@ ORDER BY
 ON profits_2020.sales_month = profits_2021.sales_month;
 
 
+/* Profit percentage jump */
+WITH ProfitByYear AS (
+    SELECT
+        profit_year,
+        SUM(Operating_Profit) AS yearly_profit
+    FROM (
+        SELECT
+            Operating_Profit,
+            SUBSTRING(invoice_date, 1, 4) AS profit_year
+        FROM
+            adidas_data
+    ) AS subquery
+    WHERE profit_year IN ('2020', '2021')
+    GROUP BY profit_year
+)
+SELECT
+    profit_year,
+    yearly_profit,
+    LAG(yearly_profit) OVER (ORDER BY profit_year) AS prev_year_profit,
+    ROUND(((yearly_profit - LAG(yearly_profit) OVER (ORDER BY profit_year)) / LAG(yearly_profit) OVER (ORDER BY profit_year)) * 100, 2) AS percentage_jump
+FROM
+    ProfitByYear;
+
+
 /* Products and how many orders fall into their respective categories */
 SELECT 
     product, COUNT(product) AS product_count
