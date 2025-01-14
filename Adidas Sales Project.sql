@@ -1,270 +1,210 @@
-CREATE DATABASE Adidas;
-USE adidas;
+-- Collecting a scope of the data
+SELECT *
+FROM adidas_data
+LIMIT 10;
 
-/* Data Analysis on Adidas sales in the United States */
+-- Which retailers are present, and how many locations do each retailer occupy?
 
+SELECT
+  DISTINCT retailer,
+  COUNT(retailer) AS retailer_count
+FROM adidas_data
+GROUP BY retailer;
 
-/* Insights analyzed:
-1.) Distinct retailers, cities, states
-2.) Count of retailers, cities, and states present in the data
-3.) Total Amount of units sold(overall, by year and month)
-4.) Revenue for Adidas(overall, by year and month)
-5.) Retailers with highest amount of orders
-6.) Total Revenue for each retailer(overall, by year and month)
-7.) Percent of total sales for each retailer(overall, by year)
-8.) Top/bottom revenue numbers based on city, state, region
-9.) Profit
-10.) Most popular categories 
-11.) Most popular method of ordering */
+-- How many states are present? (Used to group into regions, if number were to be less than 50, data could skew greatly)
 
 SELECT 
-    *
-FROM
-    adidas_data;
-
-/* Distinct retailers, cities, and states in the data */
-SELECT DISTINCT
-    retailer
-FROM
-    adidas_data;
-
-SELECT DISTINCT
-    state, city
-FROM
-    adidas_data;
+  COUNT(DISTINCT state)
+FROM adidas_data;
 
 
-/* Number of distinct states and cities */
-SELECT 
-    COUNT(DISTINCT state)
-FROM
-    adidas_data;
+-- What are the product categories sold?
 
 SELECT 
-    COUNT(DISTINCT city)
-FROM
-    adidas_data;
+  COUNT(DISTINCT product)
+FROM adidas_data;
 
 
-/* Number of distinct products sold */
+-- How many total units(total products sold) were sold?
+
 SELECT 
-    COUNT(DISTINCT product)
-FROM
-    adidas_data;
+  SUM(units_sold) AS total_products_sold
+FROM adidas_data;
 
 
-/* Total amount of units sold */
+-- Comparing 2020 and 2021, how many units were sold in each year? 
+
 SELECT 
-    SUM(units_sold) AS total_products_sold
-FROM
-    adidas_data;
-
-
-/* Number of products sold in 2020 and 2021 */
-SELECT 
-    sales_year, SUM(units_sold) AS num_products_sold
+  sales_year, SUM(units_sold) AS num_products_sold
 FROM
     (SELECT 
-        Units_Sold, SUBSTRING(invoice_date, 1, 4) AS sales_year
+        units_Sold, SUBSTRING(invoice_date, 1, 4) AS sales_year
     FROM
         adidas_data) AS subquery
-WHERE
-    sales_year IN ('2020' , '2021')
+WHERE sales_year IN ('2020' , '2021')
 GROUP BY sales_year;
 
 
-/* Number of products sold in 2020 and 2021, listed by month */
-WITH month_sales_2020 AS (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    COUNT(units_sold) AS products_sold
-FROM
-    adidas_data
-WHERE YEAR(Invoice_Date) = 2020
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month
-)
-SELECT *
-FROM month_sales_2020
-JOIN 
-  (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    COUNT(units_sold) AS products_sold
-FROM
-    adidas_data
-WHERE YEAR(Invoice_Date) = 2021
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month) AS month_sales_2021
-ON month_sales_2020.sales_month = month_sales_2021.sales_month;
+-- What were the number of units sold per month? Display along with month-over-month trends as a percent
 
-
-
-/* The amount increase of units sold from 2020 to 2021 as a percentage */
-WITH SalesByYear AS (
+WITH monthly_units_sold AS (
+    SELECT
+        YEAR(invoice_date) AS sales_year,
+        MONTH(invoice_date) AS sales_month,
+        COUNT(units_sold) AS products_sold
+    FROM
+        adidas_data
+    WHERE
+        YEAR(invoice_date) IN (2020, 2021)
+    GROUP BY
+        sales_year, sales_month
+    ORDER BY
+        sales_year, sales_month
+),
+units_sold_with_change AS (
     SELECT
         sales_year,
-        SUM(units_sold) AS num_products_sold
-    FROM (
-        SELECT
-            units_sold,
-            SUBSTRING(invoice_date, 1, 4) AS sales_year
-        FROM
-            adidas_data
-    ) AS subquery
-    WHERE sales_year IN ('2020', '2021')
-    GROUP BY sales_year
+        sales_month,
+        products_sold,
+        LAG(products_sold) OVER (
+            PARTITION BY sales_year 
+            ORDER BY sales_month
+        ) AS previous_month_units_sold
+    FROM
+        monthly_units_sold
 )
 SELECT
     sales_year,
-    num_products_sold,
-    LAG(num_products_sold) OVER (ORDER BY sales_year) AS prev_year_sold,
-    ROUND(((num_products_sold - LAG(num_products_sold) OVER (ORDER BY sales_year)) / LAG(num_products_sold) OVER (ORDER BY sales_year)) * 100, 2) AS percentage_jump
+    sales_month,
+    products_sold,
+    previous_month_units_sold,
+    CASE
+        WHEN previous_month_units_sold IS NOT NULL THEN 
+            ROUND(((products_sold - previous_month_units_sold) * 100.0 / previous_month_units_sold), 2)
+        ELSE NULL
+    END AS percent_change
 FROM
-    SalesByYear;
+    units_sold_with_change
+ORDER BY
+    sales_year, sales_month;
+
     
-    
-    /* Total revenue for Adidas*/
+-- How much revenue did Adidas generate from 2020-2021? 
 SELECT 
-    SUM(total_sales) AS total_revenue
-FROM
-    adidas_data;
+  SUM(total_sales) AS total_revenue
+FROM adidas_data;
     
 
 
-/* Total revenue listed for 2020 and 2021 */
+-- Compare revenue earned in 2020 and 2021 separately. How much did each respective year generate?
+
 SELECT 
-    sales_year, SUM(total_sales) AS overall_revenue
+  sales_year, SUM(total_sales) AS overall_revenue
 FROM
     (SELECT 
         Total_Sales, SUBSTRING(invoice_date, 1, 4) AS sales_year
     FROM
         adidas_data) AS subquery
-WHERE
-    sales_year IN ('2020' , '2021')
+WHERE sales_year IN ('2020' , '2021')
 GROUP BY sales_year;
 
 
-/* Total monthly revenue per month */
-WITH month_revenue_2020 AS (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    SUM(total_sales) AS monthly_revenue
-FROM
-    adidas_data
-WHERE YEAR(Invoice_Date) = 2020
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month
-)
-SELECT *
-FROM month_revenue_2020
-JOIN 
-  (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    SUM(total_sales) AS monthly_revenue
-FROM
-    adidas_data
-WHERE YEAR(Invoice_Date) = 2021
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month) AS month_revenue_2021
-ON month_revenue_2020.sales_month = month_revenue_2021.sales_month;
+-- Show the month over month revenue trends, along with growth percentage. 
 
-
-/* Percent increase from 2020 to 2021 for total revenue */
-WITH SalesByYear AS (
+WITH monthly_revenue AS (
+    SELECT
+        YEAR(invoice_date) AS sales_year,
+        MONTH(invoice_date) AS sales_month,
+        SUM(total_sales) AS monthly_revenue
+    FROM
+        adidas_data
+    WHERE
+        YEAR(invoice_date) IN (2020, 2021)
+    GROUP BY
+        sales_year, sales_month
+    ORDER BY
+        sales_year, sales_month
+),
+revenue_with_change AS (
     SELECT
         sales_year,
-        SUM(total_sales) AS yearly_revenue
-    FROM (
-        SELECT
-            total_sales,
-            SUBSTRING(invoice_date, 1, 4) AS sales_year
-        FROM
-            adidas_data
-    ) AS subquery
-    WHERE sales_year IN ('2020', '2021')
-    GROUP BY sales_year
+        sales_month,
+        monthly_revenue,
+        LAG(monthly_revenue) OVER (
+            PARTITION BY sales_year 
+            ORDER BY sales_month
+        ) AS previous_month_revenue
+    FROM
+        monthly_revenue
 )
 SELECT
     sales_year,
-    yearly_revenue,
-    LAG(yearly_revenue) OVER (ORDER BY sales_year) AS prev_year_sold,
-    ROUND(((yearly_revenue - LAG(yearly_revenue) OVER (ORDER BY sales_year)) / LAG(yearly_revenue) OVER (ORDER BY sales_year)) * 100, 2) AS percentage_jump
+    sales_month,
+    monthly_revenue,
+    previous_month_revenue,
+    CASE
+        WHEN previous_month_revenue IS NOT NULL THEN 
+            ROUND(((monthly_revenue - previous_month_revenue) * 100.0 / previous_month_revenue), 2)
+        ELSE NULL
+    END AS percent_change
 FROM
-    SalesByYear;
+    revenue_with_change
+ORDER BY
+    sales_year, sales_month;
 
 
-/* Total profit */
+-- How much did Adidas make as profit?
+
 SELECT 
-    SUM(Operating_Profit) AS total_profit
-FROM
-    adidas_data;
+  SUM(Operating_Profit) AS total_profit
+FROM adidas_data;
 
 
+-- Display profit margins by month, including growth percentages.
 
-/* Total profit by year and month, looking at months where numbers increase or decrease significantly */
-WITH profits_2020 AS (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    ROUND(SUM(Operating_Profit), 2) AS monthly_profit
-FROM
-    adidas_data
-WHERE
-    YEAR(invoice_date) = 2020
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month
-)
-SELECT *
-FROM profits_2020
-JOIN
-  (SELECT
-    YEAR(invoice_date) AS sales_year,
-    MONTH(invoice_date) AS sales_month,
-    ROUND(SUM(Operating_Profit), 2) AS monthly_profit
-FROM
-    adidas_data
-WHERE
-    YEAR(invoice_date) = 2021
-GROUP BY
-    sales_year, sales_month
-ORDER BY
-    sales_year, sales_month) AS profits_2021
-ON profits_2020.sales_month = profits_2021.sales_month;
-
-
-/* Profit percentage jump */
-WITH ProfitByYear AS (
+WITH monthly_profits AS (
     SELECT
-        profit_year,
-        SUM(Operating_Profit) AS yearly_profit
-    FROM (
-        SELECT
-            Operating_Profit,
-            SUBSTRING(invoice_date, 1, 4) AS profit_year
-        FROM
-            adidas_data
-    ) AS subquery
-    WHERE profit_year IN ('2020', '2021')
-    GROUP BY profit_year
+        YEAR(invoice_date) AS sales_year,
+        MONTH(invoice_date) AS sales_month,
+        ROUND(SUM(Operating_Profit), 2) AS monthly_profit
+    FROM
+        adidas_data
+    WHERE
+        YEAR(invoice_date) IN (2020, 2021)
+    GROUP BY
+        sales_year, sales_month
+    ORDER BY
+        sales_year, sales_month
+),
+profits_with_change AS (
+    SELECT
+        sales_year,
+        sales_month,
+        monthly_profit,
+        LAG(monthly_profit) OVER (
+            PARTITION BY sales_year 
+            ORDER BY sales_month
+        ) AS previous_month_profit
+    FROM
+        monthly_profits
 )
 SELECT
-    profit_year,
-    yearly_profit,
-    LAG(yearly_profit) OVER (ORDER BY profit_year) AS prev_year_profit,
-    ROUND(((yearly_profit - LAG(yearly_profit) OVER (ORDER BY profit_year)) / LAG(yearly_profit) OVER (ORDER BY profit_year)) * 100, 2) AS percentage_jump
+    sales_year,
+    sales_month,
+    monthly_profit,
+    previous_month_profit,
+    CASE
+        WHEN previous_month_profit IS NOT NULL THEN 
+            ROUND(((monthly_profit - previous_month_profit) * 100.0 / previous_month_profit), 2)
+        ELSE NULL
+    END AS percent_change
 FROM
-    ProfitByYear;
+    profits_with_change
+ORDER BY
+    sales_year, sales_month;
+
+
+
 
 
 /* Products and how many orders fall into their respective categories */
